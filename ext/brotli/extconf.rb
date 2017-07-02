@@ -24,7 +24,7 @@ def acopy(dir)
     srcs = files.map { |e| File.basename e }.select { |e| e.end_with?('.c') || e.end_with?('.h')  }.map { |e| File.join('common', e) }
   end
 
-  objs = srcs.map { |e| e.sub(/\.c\z/, '.' + $OBJEXT) }
+  objs = srcs.select { |e| e.end_with?('.c') }.map { |e| e.sub(/\.c\z/, '.' + $OBJEXT) }
   [srcs, objs]
 end
 
