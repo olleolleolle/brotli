@@ -3,29 +3,37 @@ require 'fileutils'
 require 'rbconfig'
 
 $CPPFLAGS << ' -DOS_MACOSX' if RbConfig::CONFIG['host_os'] =~ /darwin|mac os/
-$INCFLAGS << ' -I./enc -I./dec -I./common'
+$INCFLAGS << '-I./common -I./include'
 create_makefile('brotli/brotli')
 
 def acopy(dir)
   # source dir
-  FileUtils.mkdir_p File.expand_path(File.join(__dir__, dir))
+  FileUtils.mkdir_p(File.expand_path(File.join(__dir__, dir)))
   # object dir
-  FileUtils.mkdir_p dir
+  FileUtils.mkdir_p(dir)
 
-  files = Dir[File.expand_path(File.join(__dir__, '..', '..', 'vendor', 'brotli', dir, '*.[ch]'))]
-  FileUtils.cp files, dir, verbose: true
+  brotli_dir = File.join(__dir__, '..', '..', 'vendor', 'brotli')
 
-  srcs = files.map { |e| File.basename e }.select { |e| e.end_with? '.c' }.map { |e| File.join(dir, e) }
+  if dir == 'include'
+    files = Dir.glob(File.expand_path(File.join(brotli_dir, 'include', 'brotli', '*.[ch]')))
+    FileUtils.cp_r File.join(brotli_dir, 'include', '.'), 'include', verbose: false
+    srcs = files.map { |e| File.basename e }.select { |e| e.end_with?('.c') || e.end_with?('.h') }.map { |e| File.join('include', 'brotli', e) }
+  else
+    files = Dir.glob(File.expand_path(File.join(brotli_dir, dir, '**/*.[ch]')))
+    FileUtils.cp_r files, 'common', verbose: false
+    srcs = files.map { |e| File.basename e }.select { |e| e.end_with?('.c') || e.end_with?('.h')  }.map { |e| File.join('common', e) }
+  end
+
   objs = srcs.map { |e| e.sub(/\.c\z/, '.' + $OBJEXT) }
   [srcs, objs]
 end
 
 srcs = []
 objs = []
-%w(enc dec common).each do |dir|
-  a, b = acopy dir
-  srcs.concat a
-  objs.concat b
+%w(include common).each do |dir|
+  a, b = acopy(dir)
+  srcs.concat(a)
+  objs.concat(b)
 end
 
 File.open('Makefile', 'r+') do |f|
